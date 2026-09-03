@@ -1,12 +1,14 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import serial
+from loguru import logger
 
 @dataclass(frozen=True)
 class TFMiniFrame:
     distance_cm: int
     strength: int
     temperature_raw: int
+    raw_hex: str = ""
 
 class TFMiniReader:
     HEADER = b"\x59\x59"
@@ -38,11 +40,12 @@ class TFMiniReader:
                 break
             raw = bytes(self.buffer[:9])
             if (sum(raw[:8]) & 0xFF) != raw[8]:
+                logger.debug(f"TFMINI {self.port} checksum_error raw={raw.hex(' ')}")
                 del self.buffer[0]
                 continue
             dist = raw[2] | (raw[3] << 8)
             strength = raw[4] | (raw[5] << 8)
             temp = raw[6] | (raw[7] << 8)
-            frames.append(TFMiniFrame(dist, strength, temp))
+            frames.append(TFMiniFrame(dist, strength, temp, raw.hex(" ")))
             del self.buffer[:9]
         return frames

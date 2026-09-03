@@ -27,7 +27,9 @@ class DisplayManager:
         self.connected = (int(reason_code) == 0)
         logger.info(f"MQTT connected rc={reason_code}")
         client.publish(f"{self.base}/controller/status", "online", qos=1, retain=True)
-        client.subscribe(f"{self.base}/junction/{self.cfg['junction_id']}/display/+/status", qos=1)
+        topic = f"{self.base}/junction/{self.cfg['junction_id']}/display/+/status"
+        result, mid = client.subscribe(topic, qos=1)
+        logger.info(f"MQTT subscribe topic={topic} result={result} mid={mid}")
 
     def _on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties):
         self.connected = False
@@ -38,6 +40,7 @@ class DisplayManager:
             topic = msg.topic
             status = msg.payload.decode("utf-8", errors="replace")
             display_id = topic.split("/")[-2]
+            logger.debug(f"MQTT RX topic={topic} payload={status}")
             old = self.display_status.get(display_id)
             self.display_status[display_id] = status
             if status != old:
@@ -70,8 +73,10 @@ class DisplayManager:
         payload_key = (state, tuple(faults), text)
         if force or payload_key != self._last_payload_key or now - self._last_publish >= self.interval:
             encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+            topic = f"{self.base}/junction/{self.cfg['junction_id']}/display"
+            logger.debug(f"MQTT publish topic={topic} payload={encoded}")
             info = self.client.publish(
-                f"{self.base}/junction/{self.cfg['junction_id']}/display",
+                topic,
                 encoded, qos=self.qos, retain=self.retain
             )
             self.client.publish(

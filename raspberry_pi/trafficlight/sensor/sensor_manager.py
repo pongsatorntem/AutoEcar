@@ -21,6 +21,7 @@ class SensorManager:
         self._last_sample_log = 0.0
         self._sample_interval = float(cfg["log"].get("sensor_sample_interval_s", 1.0))
         self._reopen_s = float(scfg.get("reopen_interval_s", 2.0))
+        self._last_frame = {name: None for name in self.states}
 
     def _close_reader(self, name: str):
         reader = self.readers.pop(name, None)
@@ -53,6 +54,7 @@ class SensorManager:
             if reader:
                 try:
                     for frame in reader.read_available():
+                        self._last_frame[name] = frame
                         state.ingest(frame.distance_cm, frame.strength, now)
                 except Exception as e:
                     logger.error(f"SENSOR {name} read_error {e}; will reopen")
@@ -74,6 +76,7 @@ class SensorManager:
                 snap = s.s
                 logger.debug(
                     f"SENSOR {snap.name} dist={snap.distance_cm} strength={snap.strength} "
-                    f"raw={snap.raw_detected} occupied={snap.occupied} online={snap.online}"
+                    f"raw={snap.raw_detected} occupied={snap.occupied} online={snap.online} "
+                    f"frame={getattr(self._last_frame[snap.name], 'raw_hex', None)}"
                 )
         return {name: state.s for name, state in self.states.items()}

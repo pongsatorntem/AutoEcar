@@ -6,6 +6,10 @@
 #endif
 static_assert(DISPLAY_ID >= 1 && DISPLAY_ID <= 7, "DISPLAY_ID must be 1..7");
 
+#ifndef FIRMWARE_VERSION
+#define FIRMWARE_VERSION "1.0.4-debug"
+#endif
+
 static IPAddress DEVICE_IP(10,77,0,10 + DISPLAY_ID);
 static IPAddress DNS_IP(10,77,0,1);
 static IPAddress GATEWAY_IP(0,0,0,0);

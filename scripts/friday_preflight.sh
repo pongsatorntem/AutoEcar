@@ -12,4 +12,5 @@ systemctl is-enabled --quiet trafficlight && ok "trafficlight autostart enabled"
 echo
 ip -br addr
 printf '\nPASS=%d FAIL=%d\n' "$PASS" "$FAIL"
+echo "Next display network check: ./scripts/display_network_debug.sh"
 [[ $FAIL -eq 0 ]]

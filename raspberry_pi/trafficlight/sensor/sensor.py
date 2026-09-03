@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import time
+from loguru import logger
 
 @dataclass
 class SensorSnapshot:
@@ -29,6 +30,7 @@ class SensorState:
         self.recover_stable_s = recover_stable_s
         self._raw_since: float | None = None
         self._recover_since: float | None = None
+        self._last_raw: bool | None = None
 
     def ingest(self, distance_cm: int, strength: int, now: float | None = None):
         now = now if now is not None else time.monotonic()
@@ -45,18 +47,28 @@ class SensorState:
             self._recover_since = now
 
         raw = strength >= self.min_strength and 0 < distance_cm < self.threshold_cm
+        if raw != self._last_raw:
+            logger.debug(
+                f"SENSOR {self.s.name} raw_detected={raw} dist={distance_cm} strength={strength} "
+                f"threshold_cm={self.threshold_cm} min_strength={self.min_strength}"
+            )
+            self._last_raw = raw
         self.s.raw_detected = raw
         if raw:
             if self._raw_since is None:
                 self._raw_since = now
+                logger.debug(f"SENSOR {self.s.name} debounce_start")
             if now - self._raw_since >= self.debounce_s:
                 self.s.last_detect_at = now
                 if not self.s.occupied:
                     self.s.occupied = True
                     self.s.first_detect_at = now
                     self.s.rising_edge_at = now
+                    logger.info(f"SENSOR {self.s.name} RISING occupied dist={distance_cm} strength={strength}")
         else:
-            self._raw_since = None
+            if self._raw_since is not None:
+                logger.debug(f"SENSOR {self.s.name} debounce_clear")
+                self._raw_since = None
 
     def tick(self, now: float | None = None):
         now = now if now is not None else time.monotonic()
@@ -68,4 +80,5 @@ class SensorState:
                 self.s.occupied = False
                 self.s.falling_edge_at = now
                 self.s.first_detect_at = None
+                logger.info(f"SENSOR {self.s.name} FALLING clear gap_hold_s={self.gap_hold_s}")
         return self.s

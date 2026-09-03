@@ -15,6 +15,19 @@ warn(){ printf '[WARN] %s\n' "$*"; WARN=$((WARN+1)); }
 fail(){ printf '[FAIL] %s\n' "$*"; FAIL=$((FAIL+1)); }
 section(){ printf '\n== %s ==\n' "$*"; }
 have(){ command -v "$1" >/dev/null 2>&1; }
+mapping_method(){
+  local sensor="$1"
+  local rules="/etc/udev/rules.d/99-trafficlight-sensors.rules"
+  if [[ ! -f "$rules" ]]; then
+    printf 'NOT_CONFIGURED'
+  elif grep -q "SYMLINK+=\"traffic-$sensor\"" "$rules" && grep "SYMLINK+=\"traffic-$sensor\"" "$rules" | grep -q 'ATTRS{serial}'; then
+    printf 'SERIAL_BASED'
+  elif grep -q "SYMLINK+=\"traffic-$sensor\"" "$rules" && grep "SYMLINK+=\"traffic-$sensor\"" "$rules" | grep -q 'ENV{ID_PATH}'; then
+    printf 'PATH_BASED'
+  else
+    printf 'UNKNOWN'
+  fi
+}
 
 section "Host"
 printf 'hostname: %s\n' "$(hostname 2>/dev/null || echo unknown)"
@@ -102,6 +115,16 @@ if have mosquitto_sub; then
 else
   warn "mosquitto_sub unavailable"
 fi
+
+section "USB-RS485 Mapping"
+for sensor in S1 S2 S3 S4; do
+  method="$(mapping_method "$sensor")"
+  if [[ -e "/dev/traffic-$sensor" ]]; then
+    pass "/dev/traffic-$sensor $(readlink -f "/dev/traffic-$sensor" 2>/dev/null || echo unknown) mapping=$method"
+  else
+    warn "/dev/traffic-$sensor missing mapping=$method"
+  fi
+done
 
 section "Summary"
 printf 'PASS=%d WARN=%d FAIL=%d\n' "$PASS" "$WARN" "$FAIL"

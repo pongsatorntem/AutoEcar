@@ -36,7 +36,8 @@ step "Install OS packages"
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   python3 python3-venv python3-pip python3-pytest \
-  mosquitto mosquitto-clients git network-manager
+  mosquitto mosquitto-clients git network-manager \
+  udev iproute2 iputils-ping coreutils grep sed gawk findutils hostname systemd
 pass "OS packages installed"
 
 step "Create service account"

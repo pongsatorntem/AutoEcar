@@ -24,7 +24,7 @@ class DisplayManager:
         self.client.loop_start()
 
     def _on_connect(self, client, userdata, flags, reason_code, properties):
-        self.connected = (int(reason_code) == 0)
+        self.connected = (reason_code == 0)
         logger.info(f"MQTT connected rc={reason_code}")
         client.publish(f"{self.base}/controller/status", "online", qos=1, retain=True)
         topic = f"{self.base}/junction/{self.cfg['junction_id']}/display/+/status"

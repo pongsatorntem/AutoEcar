@@ -4,7 +4,8 @@
   "loop_hz": 20,
   "sensor": {
     "baudrate": 115200,
-    "threshold_cm": 270,
+    "min_detect_cm": 20,
+    "max_detect_cm": 220,
     "min_strength": 100,
     "debounce_ms": 200,
     "gap_hold_s": 1.2,

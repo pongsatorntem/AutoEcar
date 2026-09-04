@@ -10,9 +10,16 @@ class SensorManager:
         self.scfg = scfg
         self.ports = dict(scfg["ports"])
         self.states = {
-            name: SensorState(name, scfg["threshold_cm"], scfg["min_strength"],
-                              scfg["debounce_ms"], scfg["gap_hold_s"],
-                              scfg["offline_timeout_s"], scfg["recover_stable_s"])
+            name: SensorState(
+                name,
+                scfg["min_detect_cm"],
+                scfg["max_detect_cm"],
+                scfg["min_strength"],
+                scfg["debounce_ms"],
+                scfg["gap_hold_s"],
+                scfg["offline_timeout_s"],
+                scfg["recover_stable_s"],
+            )
             for name in ("S1", "S2", "S3", "S4")
         }
         self.readers: dict[str, TFMiniReader] = {}

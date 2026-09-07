@@ -4,8 +4,8 @@
   "loop_hz": 20,
   "sensor": {
     "baudrate": 115200,
-    "min_detect_cm": 20,
-    "max_detect_cm": 220,
+    "min_detect_cm": 30,
+    "max_detect_cm": 250,
     "min_strength": 100,
     "debounce_ms": 200,
     "gap_hold_s": 1.2,
@@ -20,12 +20,12 @@
     }
   },
   "direction": {
-    "pair_window_s": 2.0,
-    "yellow_order": ["S1", "S2"],
-    "red_order": ["S3", "S4"]
+    "pair_window_s": 5.0,
+    "yellow_order": ["S4", "S3"],
+    "red_order": ["S2", "S1"]
   },
   "timing": {
-    "red_duration_s": 3.0,
+    "red_duration_s": 5.0,
     "return_yellow_s": 5.0,
     "yellow_clear_delay_s": 5.0
   },

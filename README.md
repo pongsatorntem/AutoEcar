@@ -3,11 +3,12 @@
 Ready-to-deploy repository for Raspberry Pi 4B + four TF-Mini Plus sensors + 1–7 independent 64×32 HUB75 displays.
 
 ## System behavior
-- S1 -> S2 within `pair_window_s` confirms approach -> all displays YELLOW.
-- S3 -> S4 confirms red zone -> all displays RED immediately.
+- Real vehicle travel direction is S4 -> S3 -> S2 -> S1.
+- S4 -> S3 within `pair_window_s` confirms approach -> all displays YELLOW.
+- S2 -> S1 confirms red zone -> all displays RED immediately.
 - Reverse order is ignored.
 - Debounce + gap hold merges cab/body/dolly gaps into one convoy.
-- RED fixed 3 s; RETURN yellow fixed 5 s.
+- RED fixed 5 s; RETURN yellow fixed 5 s.
 - If a yellow convoy is still active at end of RETURN, stay YELLOW with no green flash.
 - Sensor offline does not force RED; all displays add `ERR:Sx` while continuing the main state.
 - A display that loses controller MQTT adds `LINK ERR` while retaining its last state.
@@ -23,7 +24,7 @@ See:
 Observed Pi: Debian 12 Bookworm, kernel 6.6 Raspberry Pi arm64. Login user may remain `trafficlight`; system service uses separate user `trafficlightsvc`. Installer sets hostname to `trafficlight`.
 
 ## Network
-- Wi-Fi: maintenance only; optional profiles `TPCAP_AUTO-E-CAR`, `TOP`, `TOPTOP_5G`.
+- Wi-Fi: maintenance/VNC/SSH only. Field deployment currently uses `Auto_ECar`, but Wi-Fi is site/runtime configuration and traffic control does not depend on it.
 - Ethernet: isolated display network.
   - Pi: `10.77.0.1/24`
   - D1..D7: `10.77.0.11` .. `10.77.0.17`
@@ -62,7 +63,7 @@ sudo systemctl start trafficlight
 sudo journalctl -u trafficlight -f
 ```
 
-Autostart is already enabled by the installer.
+Fresh install state: `install.sh` installs `trafficlight.service` but intentionally leaves it disabled/stopped until S1-S4 sensor mapping is complete. After sensor mapping/field deployment, `trafficlight.service` should be enabled and active; Mosquitto should remain enabled and active.
 
 ## ESP32 displays
 PlatformIO has seven environments. Each environment derives its fixed IP from the display ID:
@@ -77,7 +78,7 @@ pio run -e display2
 All displays subscribe to one command topic and therefore change state together.
 
 ### Mandatory bench check before Friday
-The BOM identifies the exact controller as ArtronShop ESP-HUB75 product 03K26. Its published 64x32 example pin mapping is explicitly configured in firmware. Bench-test one board/panel before flashing all seven. See `docs/REVIEW_AND_RISKS.md`. W5500 uses CS=10, MOSI=11, SCK=12, MISO=13.
+The BOM identifies the exact controller as ArtronShop ESP-HUB75 product 03K26. The field-proven ESP32-S3 + Mini W5500 mapping is CS=21, MOSI=13, SCK=12, MISO=11, RST=4. Do not replace it with Arduino UNO Ethernet Shield examples. Brightness is `MATRIX_BRIGHTNESS=60`.
 
 ## Tests
 

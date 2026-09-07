@@ -10,17 +10,25 @@
 
 ## Logic locked for Friday test
 - TF-Mini Plus x4.
-- Forward direction only: S1 -> S2 confirms Yellow, S3 -> S4 confirms Red.
+- Forward direction only: S4 -> S3 confirms Yellow, S2 -> S1 confirms Red.
 - Timestamp window prevents raw simultaneous-AND dependency.
 - Debounce + gap-hold merges cab/body/operator/dolly gaps into one convoy.
 - Red overwrites Idle/Yellow immediately.
-- RED fixed 3 s -> RETURN yellow fixed 5 s.
+- RED fixed 5 s -> RETURN yellow fixed 5 s.
 - If the yellow convoy is still active after RETURN, continue Yellow without a green flash.
 - Sensor failure does not force the entire junction Red; it is displayed as a fault badge and logged.
 - Special-junction priority logic is intentionally deferred.
 
 ## Friday rule
-Do not change multiple timing parameters simultaneously. Verify sensor distance/strength first, then tune `gap_hold_s` only if the cab/dolly convoy is being split. Change `pair_window_s` only if a correct S1->S2 or S3->S4 passage is missed.
+Do not change multiple timing parameters simultaneously. Verify sensor distance/strength first, then tune `gap_hold_s` only if the cab/dolly convoy is being split. Change `pair_window_s` only if a correct S4->S3 or S2->S1 passage is missed.
+
+## v1.0.4-field — Friday field baseline
+- Real travel direction is S4 -> S3 -> S2 -> S1.
+- Production pair window is 5.0 s.
+- Production TF-Mini range is 30..250 cm inclusive with strength >= 100.
+- Display brightness is `MATRIX_BRIGHTNESS=60`.
+- W5500 field mapping is CS=21, MOSI=13, SCK=12, MISO=11, RST=4.
+- Maintenance Wi-Fi is runtime/site configuration; field deployment currently uses `Auto_ECar`, while traffic/display MQTT remains on isolated Ethernet `10.77.0.0/24`.
 
 ## 1.0.1-final — Raspberry Pi Bookworm install hotfix
 - Removed duplicate Mosquitto `persistence_location` directives that prevented the broker from starting on Debian 12 Bookworm.

@@ -8,23 +8,25 @@ This controller protects an E-Car junction using four downward TF-Mini Plus sens
 ## Sensor positions and direction
 
 ```text
-STOP side                                                     Junction
-   |---- S1 ----1 m---- S2 ----------- S3 ----1 m---- S4 --------> travel
-          Yellow pair                       Red pair
+Junction                                                     STOP side
+    <---- S1 ----1 m---- S2 ----------- S3 ----1 m---- S4 ---- travel
+             Red pair                         Yellow pair
 
-Valid direction: S1 -> S2, then later S3 -> S4
-Reverse direction: S2 -> S1 or S4 -> S3 is ignored
+Valid travel direction: S4 -> S3 -> S2 -> S1
+Yellow trigger: S4 -> S3 within 5 s
+Red trigger: S2 -> S1 within 5 s
+Reverse direction: S3 -> S4 or S1 -> S2 is ignored
 ```
 
 ## Three-layer detection
 
-1. **Raw frame** — valid TF-Mini frame, distance `< 270 cm`, strength `>= 100`.
+1. **Raw frame** — valid TF-Mini frame, distance `30..250 cm`, strength `>= 100`.
 2. **Sensor occupancy** — raw detect must pass 200 ms debounce. Short gaps up to `gap_hold_s` stay occupied, so cab/body/dolly gaps remain one convoy.
 3. **Directional pair** — first sensor rising edge followed by second sensor rising edge within `pair_window_s` confirms direction.
 
 ```mermaid
 flowchart LR
-    A[TF-Mini frames] --> B{distance < 270 cm\nand strength >= 100?}
+    A[TF-Mini frames] --> B{30..250 cm\nand strength >= 100?}
     B -- No --> C[Raw clear]
     B -- Yes --> D[200 ms debounce]
     D --> E[Sensor OCCUPIED]
@@ -33,8 +35,8 @@ flowchart LR
     F -- Yes --> G[Sensor CLEAR]
     E --> H[Timestamp first rising edge]
     H --> I{Correct pair order\nwithin pair_window_s?}
-    I -- S1 -> S2 --> J[YELLOW confirmed]
-    I -- S3 -> S4 --> K[RED confirmed]
+    I -- S4 -> S3 --> J[YELLOW confirmed]
+    I -- S2 -> S1 --> K[RED confirmed]
     I -- Reverse --> L[Ignore until pair clears]
 ```
 
@@ -48,11 +50,11 @@ stateDiagram-v2
     RED: FULL RED BACKGROUND / white STOP
     RETURN: FULL YELLOW BACKGROUND / black CAUTION
 
-    IDLE --> YELLOW: S1 -> S2 confirmed
-    IDLE --> RED: S3 -> S4 confirmed
-    YELLOW --> RED: S3 -> S4 confirmed (immediate overwrite)
+    IDLE --> YELLOW: S4 -> S3 confirmed
+    IDLE --> RED: S2 -> S1 confirmed
+    YELLOW --> RED: S2 -> S1 confirmed (immediate overwrite)
     YELLOW --> IDLE: Yellow convoy clear + 5 s
-    RED --> RETURN: fixed 3 s
+    RED --> RETURN: fixed 5 s
     RETURN --> YELLOW: after 5 s AND yellow convoy still active
     RETURN --> IDLE: after 5 s AND no yellow convoy
 ```

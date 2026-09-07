@@ -21,7 +21,7 @@
 
 ```text
 Travel direction ->
-S1 ---- S2 ---------------- S3 ---- S4 ---- Junction
+S4 ---- S3 ---------------- S2 ---- S1 ---- Junction
 Yellow pair                  Red pair
 ```
 

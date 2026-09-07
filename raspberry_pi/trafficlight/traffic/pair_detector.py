@@ -3,11 +3,13 @@ from dataclasses import dataclass
 import time
 from loguru import logger
 
+
 @dataclass
 class PairResult:
     triggered: bool = False
     wrong_direction: bool = False
     active: bool = False
+
 
 class DirectionalPairDetector:
     """Confirm motion only when FIRST -> SECOND occurs within window_s.
@@ -34,6 +36,15 @@ class DirectionalPairDetector:
         self._seen_first_at = None
         self._seen_second_at = None
 
+    def _expire_pending(self, now: float):
+        if self._seen_first_at is not None and now - self._seen_first_at > self.window_s:
+            self._seen_first_at = None
+        if self._seen_second_at is not None and now - self._seen_second_at > self.window_s:
+            self._seen_second_at = None
+
+    def _edge_is_stale(self, rising: float, now: float) -> bool:
+        return rising > now or now - rising > self.window_s
+
     def update(self, sensors: dict, now: float | None = None) -> PairResult:
         now = now if now is not None else time.monotonic()
         result = PairResult(active=self._latched_active)
@@ -59,6 +70,8 @@ class DirectionalPairDetector:
                 self._reset_pending()
             return result
 
+        self._expire_pending(now)
+
         # Process new rising edges only. SensorState creates a rising edge only after
         # debounce and only after its gap-hold occupancy has actually cleared.
         for name in (self.first, self.second):
@@ -67,28 +80,41 @@ class DirectionalPairDetector:
                 continue
             self._last_rising[name] = rising
 
+            if self._edge_is_stale(rising, now):
+                logger.debug(
+                    f"PAIR {self.name} ignored_stale_edge sensor={name} "
+                    f"edge_at={rising:.3f} now={now:.3f}"
+                )
+                continue
+
             if name == self.first:
                 # SECOND followed by FIRST => reverse direction. Block until clear.
-                if self._seen_second_at is not None and rising - self._seen_second_at <= self.window_s:
-                    result.wrong_direction = True
-                    self._blocked_until_clear = True
-                    self._reset_pending()
-                    logger.info(f"PAIR {self.name} wrong_direction {self.second}->{self.first}")
-                    return result
+                if self._seen_second_at is not None:
+                    dt = rising - self._seen_second_at
+                    if 0 <= dt <= self.window_s:
+                        result.wrong_direction = True
+                        self._blocked_until_clear = True
+                        self._reset_pending()
+                        logger.info(f"PAIR {self.name} wrong_direction {self.second}->{self.first} dt={dt:.3f}s")
+                        return result
                 self._seen_first_at = rising
             else:
-                if self._seen_first_at is not None and rising - self._seen_first_at <= self.window_s:
-                    result.triggered = True
-                    self._latched_active = True
-                    result.active = True
+                if self._seen_first_at is not None:
                     dt = rising - self._seen_first_at
-                    self._reset_pending()
-                    logger.info(f"PAIR {self.name} triggered {self.first}->{self.second} dt={dt:.3f}s")
-                    return result
+                    if 0 <= dt <= self.window_s:
+                        result.triggered = True
+                        self._latched_active = True
+                        result.active = True
+                        self._reset_pending()
+                        logger.info(f"PAIR {self.name} triggered {self.first}->{self.second} dt={dt:.3f}s")
+                        return result
+                    if -self.window_s <= dt < 0:
+                        result.wrong_direction = True
+                        self._blocked_until_clear = True
+                        self._reset_pending()
+                        logger.info(f"PAIR {self.name} wrong_direction {self.second}->{self.first} dt={-dt:.3f}s")
+                        return result
                 self._seen_second_at = rising
 
-        if self._seen_first_at is not None and now - self._seen_first_at > self.window_s:
-            self._seen_first_at = None
-        if self._seen_second_at is not None and now - self._seen_second_at > self.window_s:
-            self._seen_second_at = None
+        self._expire_pending(now)
         return result

@@ -2,7 +2,7 @@
 
 ## Software bugs found during re-review and fixed
 
-1. **False yellow on S1 alone** — previous pair detector exposed `active=true` when either sensor was occupied, so IDLE could enter YELLOW before S2 confirmed direction. Fixed: pair becomes active only after a valid S1 -> S2 sequence.
+1. **False yellow on first sensor alone** — previous pair detector exposed `active=true` when either sensor was occupied, so IDLE could enter YELLOW before the second pair member confirmed direction. Fixed: pair becomes active only after a valid field sequence: S4 -> S3 for yellow or S2 -> S1 for red.
 2. **MQTT publish dedupe ineffective** — timestamp was included before payload comparison, causing a publish every loop (~20 Hz). Fixed: state/fault key is compared separately; normal heartbeat is 1 Hz.
 3. **Mosquitto remote listener missing** — Mosquitto 2.x can run localhost-only without an explicit listener. Added `/etc/mosquitto/conf.d/trafficlight.conf` bound to `10.77.0.1:1883`.
 4. **USB sensor did not recover after unplug/replug** — serial port was only opened at startup. Added automatic close/reopen every 2 s after errors or missing device.
@@ -23,7 +23,7 @@ The BOM hyperlink identifies the display controller as **ArtronShop ESP-HUB75 pr
 - LAT: `47`
 - OE: `14`
 
-These pins are now explicitly configured in `esp32_display/src/main.cpp`. They do not conflict with the project W5500 SPI allocation CS=10, MOSI=11, SCK=12, MISO=13. The purchased 64x32 P5 panel uses four address lines, so E is disabled (`-1`).
+These pins are explicitly configured in `esp32_display/src/main.cpp`. The field-proven W5500 SPI allocation is CS=21, MOSI=13, SCK=12, MISO=11, RST=4. Do not replace it with Arduino UNO Ethernet Shield examples. The purchased 64x32 P5 panel uses four address lines, so E is disabled (`-1`).
 
 Vendor/product source: https://www.artronshop.co.th/product/808/esp-hub75
 Published ESP-HUB75 64x32 example: https://gist.github.com/maxpromer/18cea4e9d25aca5689818260e655a43f
@@ -35,4 +35,4 @@ Published ESP-HUB75 64x32 example: https://gist.github.com/maxpromer/18cea4e9d25
 - First confirm sensor distance/strength.
 - Then tune `gap_hold_s` using actual cab/body/dolly gaps.
 - Then tune `pair_window_s` only if valid forward passages are missed.
-- Keep RED=3 s and RETURN=5 s fixed during initial acceptance unless the process owner intentionally changes them.
+- Keep RED=5 s and RETURN=5 s fixed during acceptance unless the process owner intentionally changes them.

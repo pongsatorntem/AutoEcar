@@ -51,18 +51,20 @@ sudo journalctl -u trafficlight -f
 ## Minute 20–35: direction + state sequence
 1. Move/drive forward through S4 -> S3: all displays become yellow.
 2. Continue S2 -> S1: all displays become red immediately.
-3. Confirm red remains 5 s.
-4. Confirm yellow return remains 5 s.
-5. Confirm green after convoy is clear.
-6. Repeat reverse S3 -> S4: must NOT create a new yellow trigger.
-7. Repeat reverse S1 -> S2: must NOT create a new red trigger.
+3. Confirm red remains while S1 is occupied, even beyond 5 s.
+4. Clear S1 and confirm RETURN yellow begins only after S1 stays clear for 1 s.
+5. Confirm yellow return remains 5 s.
+6. Confirm green after convoy is clear.
+7. Repeat reverse S3 -> S4: must NOT create a new yellow trigger.
+8. Repeat reverse S1 -> S2: must NOT create a new red trigger.
 
 ## Minute 35–45: E-Car + dollies
 Use the actual E-Car and tow configuration. Confirm gaps between cab/body/hitches/dollies do not make the light flicker green. If necessary, tune only:
 
 ```json
 "gap_hold_s": 1.2,
-"pair_window_s": 5.0
+"pair_window_s": 5.0,
+"red_clear_delay_s": 1.0
 ```
 
 Change one value at a time and keep notes.

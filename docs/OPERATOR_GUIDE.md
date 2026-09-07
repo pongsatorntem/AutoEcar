@@ -8,13 +8,14 @@
 |---|---|---|
 | GREEN / `GO` | Junction available | Proceed normally and remain aware of cross traffic |
 | YELLOW / `CAUTION` | E-Car convoy is approaching / leaving protected zone | Slow down and prepare to stop |
-| RED / `STOP` | E-Car is at the junction red zone | Stop and wait |
+| RED / `STOP` | E-Car is at the junction red zone; S1 has not yet cleared | Stop and wait |
 | `ERR:S1` / `ERR:S2` / etc. | A sensor has a communication fault | Traffic light continues operating with remaining logic; report/check the named sensor |
 | `LINK ERR` | This display lost communication with controller | Treat display as unreliable and report immediately |
 
 ## Important
 - All displays belonging to the same junction show the same traffic color/state at the same time.
 - The E-Car may tow dollies. Short empty spaces between cab, body, hitch, and dollies are normal and are remembered by the controller.
+- RED remains active until S1 has been clear for 1 second, then RETURN YELLOW begins.
 - Do not use the small fault text as a traffic command. The large color/state remains the traffic command.
 
 ## Sensor names

@@ -14,7 +14,7 @@
 - Timestamp window prevents raw simultaneous-AND dependency.
 - Debounce + gap-hold merges cab/body/operator/dolly gaps into one convoy.
 - Red overwrites Idle/Yellow immediately.
-- RED fixed 5 s -> RETURN yellow fixed 5 s.
+- V1.1 RED holds until S1 is online, fresh, and continuously clear for 1 s, then RETURN yellow fixed 5 s.
 - If the yellow convoy is still active after RETURN, continue Yellow without a green flash.
 - Sensor failure does not force the entire junction Red; it is displayed as a fault badge and logged.
 - Special-junction priority logic is intentionally deferred.
@@ -29,6 +29,12 @@ Do not change multiple timing parameters simultaneously. Verify sensor distance/
 - Display brightness is `MATRIX_BRIGHTNESS=60`.
 - W5500 field mapping is CS=21, MOSI=13, SCK=12, MISO=11, RST=4.
 - Maintenance Wi-Fi is runtime/site configuration; field deployment currently uses `Auto_ECar`, while traffic/display MQTT remains on isolated Ethernet `10.77.0.0/24`.
+
+## v1.1 — RED release controlled by S1 clear
+- RED no longer exits on a fixed 5 s timer.
+- After S2 -> S1 triggers RED, S1 is the direct RED release authority.
+- RED holds while S1 is occupied, offline, stale, or unknown.
+- RETURN yellow starts only after S1 remains online, fresh, and continuously clear for `red_clear_delay_s=1.0`; freshness is gated by `red_exit_sensor_fresh_timeout_s=0.5`.
 
 ## 1.0.1-final — Raspberry Pi Bookworm install hotfix
 - Removed duplicate Mosquitto `persistence_location` directives that prevented the broker from starting on Debian 12 Bookworm.

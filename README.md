@@ -8,7 +8,7 @@ Ready-to-deploy repository for Raspberry Pi 4B + four TF-Mini Plus sensors + 1â€
 - S2 -> S1 confirms red zone -> all displays RED immediately.
 - Reverse order is ignored.
 - Debounce + gap hold merges cab/body/dolly gaps into one convoy.
-- RED fixed 5 s; RETURN yellow fixed 5 s.
+- RED holds until S1 is online, fresh, and continuously clear for 1 s; RETURN yellow fixed 5 s.
 - If a yellow convoy is still active at end of RETURN, stay YELLOW with no green flash.
 - Sensor offline does not force RED; all displays add `ERR:Sx` while continuing the main state.
 - A display that loses controller MQTT adds `LINK ERR` while retaining its last state.

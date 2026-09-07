@@ -26,6 +26,8 @@
   },
   "timing": {
     "red_duration_s": 5.0,
+    "red_clear_delay_s": 1.0,
+    "red_exit_sensor_fresh_timeout_s": 0.5,
     "return_yellow_s": 5.0,
     "yellow_clear_delay_s": 5.0
   },

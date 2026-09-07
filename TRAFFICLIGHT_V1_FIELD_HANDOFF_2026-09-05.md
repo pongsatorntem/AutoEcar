@@ -68,6 +68,12 @@ Red trigger:
 S2 -> S1 within pair_window_s=5.0
 ```
 
+Red release:
+
+```text
+S1 must be online, fresh, and continuously clear for red_clear_delay_s=1.0 before RETURN YELLOW
+```
+
 Reverse directions are invalid:
 
 ```text
@@ -99,11 +105,15 @@ Production seed values live in [config/settings.example.json](config/settings.ex
   },
   "timing": {
     "red_duration_s": 5.0,
+            "red_clear_delay_s": 1.0,
+            "red_exit_sensor_fresh_timeout_s": 0.5,
     "return_yellow_s": 5.0,
     "yellow_clear_delay_s": 5.0
   }
 }
 ```
+
+`red_duration_s` is retained as a legacy/reference value. V1.1 RED release is controlled by direct S1 occupancy, `red_clear_delay_s`, and `red_exit_sensor_fresh_timeout_s`; S1 offline/stale/unknown holds RED fail-safe.
 
 Raw detection is true only when `strength >= 100` and `30 <= distance_cm <= 250`.
 
@@ -231,8 +241,12 @@ Red:
       |
      YES
       v
-[RED 5 sec]
+[RED while S1 occupied]
       |
+      v
+<S1 clear for 1 sec?>
+      |
+     YES
       v
 [RETURN YELLOW 5 sec]
       |

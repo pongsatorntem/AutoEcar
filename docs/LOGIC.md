@@ -15,6 +15,7 @@ Junction                                                     STOP side
 Valid travel direction: S4 -> S3 -> S2 -> S1
 Yellow trigger: S4 -> S3 within 5 s
 Red trigger: S2 -> S1 within 5 s
+Red release: S1 must be online, fresh, and clear for 1 s before RETURN
 Reverse direction: S3 -> S4 or S1 -> S2 is ignored
 ```
 
@@ -54,10 +55,12 @@ stateDiagram-v2
     IDLE --> RED: S2 -> S1 confirmed
     YELLOW --> RED: S2 -> S1 confirmed (immediate overwrite)
     YELLOW --> IDLE: Yellow convoy clear + 5 s
-    RED --> RETURN: fixed 5 s
+    RED --> RETURN: S1 online, fresh, and clear continuously for 1 s
     RETURN --> YELLOW: after 5 s AND yellow convoy still active
     RETURN --> IDLE: after 5 s AND no yellow convoy
 ```
+
+`red_duration_s` remains in config as a legacy/reference value. RED exit is controlled by direct S1 occupancy plus `red_clear_delay_s`, and release requires S1 data fresher than `red_exit_sensor_fresh_timeout_s`. If S1 is offline, stale, or unknown, RED is held fail-safe.
 
 ## E-Car + dolly waveform
 

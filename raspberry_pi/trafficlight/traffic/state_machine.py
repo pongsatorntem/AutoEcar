@@ -32,15 +32,18 @@ class StateMachine:
                yellow_active: bool, now: float | None = None,
                red_exit_sensor_active: bool = True) -> TrafficState:
         now = now if now is not None else time.monotonic()
-        if self.state == TrafficState.IDLE:
-            if red_trigger:
+        if red_trigger:
+            if self.state == TrafficState.RED:
+                self.red_clear_since = None
+            else:
                 self._set(TrafficState.RED, now)
-            elif yellow_trigger or yellow_active:
+            return self.state
+
+        if self.state == TrafficState.IDLE:
+            if yellow_trigger or yellow_active:
                 self._set(TrafficState.YELLOW, now)
         elif self.state == TrafficState.YELLOW:
-            if red_trigger:
-                self._set(TrafficState.RED, now)
-            elif yellow_active:
+            if yellow_active:
                 self.yellow_clear_since = None
             else:
                 if self.yellow_clear_since is None:

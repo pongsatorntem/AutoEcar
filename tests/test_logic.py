@@ -65,6 +65,73 @@ def test_red_pair_enters_red_immediately():
     assert sm.update(False, r.triggered, False, 20.5, red_exit_sensor_active=True) == TrafficState.RED
 
 
+def test_idle_red_trigger_enters_red_immediately():
+    sm = StateMachine({"red_duration_s":5,"red_clear_delay_s":1,"return_yellow_s":5,"yellow_clear_delay_s":5})
+    assert sm.update(False, True, False, 10.0, red_exit_sensor_active=True) == TrafficState.RED
+
+
+def test_yellow_red_trigger_preempts_to_red_immediately():
+    sm = StateMachine({"red_duration_s":5,"red_clear_delay_s":1,"return_yellow_s":5,"yellow_clear_delay_s":5})
+    assert sm.update(True, False, True, 10.0) == TrafficState.YELLOW
+    assert sm.update(False, True, True, 11.0, red_exit_sensor_active=True) == TrafficState.RED
+
+
+def test_return_red_trigger_preempts_to_red_immediately():
+    sm = StateMachine({"red_duration_s":5,"red_clear_delay_s":1,"return_yellow_s":5,"yellow_clear_delay_s":5})
+    sm.state = TrafficState.RETURN
+    sm.state_since = 100.0
+    assert sm.update(False, True, False, 101.0, red_exit_sensor_active=True) == TrafficState.RED
+
+
+def test_return_red_trigger_preempts_with_four_seconds_remaining():
+    sm = StateMachine({"red_duration_s":5,"red_clear_delay_s":1,"return_yellow_s":5,"yellow_clear_delay_s":5})
+    sm.state = TrafficState.RETURN
+    sm.state_since = 100.0
+    assert sm.update(False, True, False, 101.0, red_exit_sensor_active=True) == TrafficState.RED
+
+
+def test_return_red_trigger_preempts_when_return_almost_finished():
+    sm = StateMachine({"red_duration_s":5,"red_clear_delay_s":1,"return_yellow_s":5,"yellow_clear_delay_s":5})
+    sm.state = TrafficState.RETURN
+    sm.state_since = 100.0
+    assert sm.update(False, True, False, 104.9, red_exit_sensor_active=True) == TrafficState.RED
+
+
+def test_return_red_trigger_with_s1_occupied_enters_and_holds_red():
+    sm = StateMachine({"red_duration_s":5,"red_clear_delay_s":1,"return_yellow_s":5,"yellow_clear_delay_s":5})
+    sm.state = TrafficState.RETURN
+    sm.state_since = 100.0
+    assert sm.update(False, True, False, 104.9, red_exit_sensor_active=True) == TrafficState.RED
+    assert sm.update(False, False, False, 120.0, red_exit_sensor_active=True) == TrafficState.RED
+
+
+def test_return_red_trigger_with_fresh_clear_requires_new_clear_interval():
+    sm = StateMachine({"red_duration_s":5,"red_clear_delay_s":1,"return_yellow_s":5,"yellow_clear_delay_s":5})
+    sm.state = TrafficState.RETURN
+    sm.state_since = 100.0
+    sm.red_clear_since = 90.0
+    assert sm.update(False, True, False, 104.9, red_exit_sensor_active=False) == TrafficState.RED
+    assert sm.red_clear_since is None
+    assert sm.update(False, False, False, 105.0, red_exit_sensor_active=False) == TrafficState.RED
+    assert sm.update(False, False, False, 105.9, red_exit_sensor_active=False) == TrafficState.RED
+    assert sm.update(False, False, False, 106.0, red_exit_sensor_active=False) == TrafficState.RETURN
+
+
+def test_repeated_red_trigger_while_red_resets_clear_timer_and_stays_red():
+    sm = StateMachine({"red_duration_s":5,"red_clear_delay_s":1,"return_yellow_s":5,"yellow_clear_delay_s":5})
+    sm.update(False, True, False, 10.0, red_exit_sensor_active=True)
+    sm.update(False, False, False, 11.0, red_exit_sensor_active=False)
+    assert sm.red_clear_since == 11.0
+    assert sm.update(False, True, False, 11.9, red_exit_sensor_active=False) == TrafficState.RED
+    assert sm.red_clear_since is None
+
+
+def test_yellow_trigger_while_red_cannot_override_red():
+    sm = StateMachine({"red_duration_s":5,"red_clear_delay_s":1,"return_yellow_s":5,"yellow_clear_delay_s":5})
+    sm.update(False, True, False, 10.0, red_exit_sensor_active=True)
+    assert sm.update(True, False, True, 20.0, red_exit_sensor_active=True) == TrafficState.RED
+
+
 def test_reverse_direction_is_blocked_until_clear():
     p = DirectionalPairDetector("S4", "S3", 5.0, "YELLOW")
     p.update(field_inputs(s3=True, r3=20.0), 20.0)

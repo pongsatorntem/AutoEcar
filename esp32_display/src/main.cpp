@@ -546,7 +546,135 @@ void drawNumberGridTest() {
   }
 }
 
+// Symbol modes are opt-in; ordinary display1 keeps the original solid screen.
+#ifndef DISPLAY_SYMBOL_MODE
+#define DISPLAY_SYMBOL_MODE 0
+#endif
+#ifndef SYMBOL_BENCH_TEST
+#define SYMBOL_BENCH_TEST 0
+#endif
+#if SYMBOL_BENCH_TEST && DISPLAY_ID != 1 && DISPLAY_ID != 2 && DISPLAY_ID != 3
+#error "Symbol bench test is for D1, D2 or D3 only"
+#endif
+
+enum TrafficSymbol {
+  SYMBOL_GREEN_UP_ARROW = 0,
+  SYMBOL_YELLOW = 1,
+  SYMBOL_RED_X = 2,
+};
+
+void drawPhysicalPixel(int x, int y, uint16_t color) {
+  if (x < 0 || x >= PANEL_W || y < 0 || y >= PANEL_H) return;
+
+  const int group = x / 16;
+  const int dmaX =
+    group * 32 + (x % 16)
+    + ((((y / 8) & 1) ^ (group & 1)) * 16);
+  const int dmaY =
+    (y % 8) + ((y / 16) * 8);
+
+  matrix->drawPixel(dmaX, dmaY, color);
+}
+
+void drawGreenArrow() {
+  const uint16_t color = displayColor(0, 210, 0);
+
+  for (int y = 2; y <= 15; ++y) {
+    const int halfWidth = y - 2;
+    for (int x = 31 - halfWidth; x <= 32 + halfWidth; ++x) {
+      drawPhysicalPixel(x, y, color);
+    }
+  }
+
+  for (int y = 16; y <= 29; ++y) {
+    for (int x = 28; x <= 35; ++x) {
+      drawPhysicalPixel(x, y, color);
+    }
+  }
+}
+
+void drawYellowSymbol() {
+  const uint16_t color = displayColor(255, 255, 0);
+  constexpr int top = 2;
+  constexpr int bottom = 29;
+  constexpr int maxHalfWidth = 15;
+
+  for (int y = top; y <= bottom; ++y) {
+    const int halfWidth =
+      ((y - top) * maxHalfWidth) / (bottom - top);
+    for (int x = 31 - halfWidth; x <= 32 + halfWidth; ++x) {
+      drawPhysicalPixel(x, y, color);
+    }
+  }
+}
+
+void drawRedX() {
+  const uint16_t color = displayColor(255, 0, 0);
+  constexpr int left = 18;
+  constexpr int top = 2;
+  constexpr int size = 28;
+  constexpr int halfThickness = 3;
+
+  for (int y = 0; y < size; ++y) {
+    for (int x = 0; x < size; ++x) {
+      const int diagonal1 = x - y;
+      const int diagonal2 = x + y - (size - 1);
+
+      if ((diagonal1 >= -halfThickness && diagonal1 <= halfThickness) ||
+          (diagonal2 >= -halfThickness && diagonal2 <= halfThickness)) {
+        drawPhysicalPixel(left + x, top + y, color);
+      }
+    }
+  }
+}
+
+int currentBenchSymbol() {
+  return int((millis() / 3000UL) % 3);
+}
+
+int currentProductionSymbol(const String &fault) {
+  if (stateColor == "red" || stateText == "STOP") return SYMBOL_RED_X;
+  if (stateColor == "yellow" || stateText == "CAUTION") return SYMBOL_YELLOW;
+  if (fault.length()) return SYMBOL_YELLOW;
+  if (stateColor == "green" || stateText == "GO") return SYMBOL_GREEN_UP_ARROW;
+  return SYMBOL_YELLOW;
+}
+
+void drawTrafficSymbol(int symbol) {
+  matrix->fillScreen(0);
+
+  if (symbol == SYMBOL_GREEN_UP_ARROW) {
+    drawGreenArrow();
+  } else if (symbol == SYMBOL_YELLOW) {
+    drawYellowSymbol();
+  } else {
+    drawRedX();
+  }
+}
+
 void drawScreen() {
+#if DISPLAY_SYMBOL_MODE
+  String fault = effectiveFault();
+  logDrawAction(fault);
+
+  int symbol;
+#if SYMBOL_BENCH_TEST
+  symbol = currentBenchSymbol();
+#else
+  symbol = currentProductionSymbol(fault);
+#endif
+  static String previousDrawKey = "";
+  String drawKey = String(symbol) + "|" + fault;
+  if (drawKey != previousDrawKey) {
+    drawTrafficSymbol(symbol);
+    previousDrawKey = drawKey;
+    logEvent("DISPLAY", "symbol=%s scan=%d base=%d",
+             symbol == SYMBOL_GREEN_UP_ARROW ? "UP_ARROW" :
+             symbol == SYMBOL_YELLOW ? "YELLOW_TRIANGLE" : "RED_X",
+             HUB75_SCAN_PROBE, HUB75_SCAN_PIXEL_BASE);
+  }
+#else
+
   if (stateColor == "red" || stateText == "STOP") {
     matrix->fillScreen(
       matrix->color565(255, 0, 0)
@@ -565,6 +693,7 @@ void drawScreen() {
   matrix->fillScreen(
     matrix->color565(0, 210, 0)
   );
+#endif
 }
 
 void callback(char *topic, byte *payload, unsigned int length) {
@@ -581,8 +710,8 @@ void callback(char *topic, byte *payload, unsigned int length) {
   String previousColor = stateColor;
   String previousFault = sensorFaultText;
 
-  stateText = String((const char *)(doc["text"] | "GO"));
-  stateColor = String((const char *)(doc["color"] | "green"));
+  stateText = String((const char *)(doc["text"] | ""));
+  stateColor = String((const char *)(doc["color"] | ""));
   sensorFaultText = String((const char *)(doc["fault_text"] | ""));
   lastCommandMs = millis();
 
@@ -695,7 +824,10 @@ void setup() {
   logEvent("HUB75", "dma_config width=%d height=%d scan_probe=%d", DMA_PANEL_W, DMA_PANEL_H, HUB75_SCAN_PROBE);
   logEvent("HUB75", "init START");
   matrix = new MatrixPanel_I2S_DMA(mxconfig);
-  matrix->begin();
+  if (!matrix->begin()) {
+    logEvent("HUB75", "DMA allocation/init FAILED; restart required");
+    while (true) delay(1000);
+  }
   matrix->setBrightness8(MATRIX_BRIGHTNESS);
 
 #if HUB75_SCAN_PROBE != 0
@@ -751,6 +883,24 @@ void setup() {
 }
 
 void loop() {
+#if DISPLAY_SYMBOL_MODE
+  static_assert(DMA_PANEL_W == 128 && DMA_PANEL_H == 16,
+                "Requires DMA 128x16");
+  static_assert(PANEL_CHAIN == 1,
+                "Requires one panel");
+  matrix->setRotation(0);
+#endif
+
+#if SYMBOL_BENCH_TEST
+  static unsigned long lastBenchDraw = 0;
+  if (lastBenchDraw == 0 || millis() - lastBenchDraw >= 3000UL) {
+    lastBenchDraw = millis();
+    drawScreen();
+  }
+  delay(10);
+  return;
+#endif
+
   connectMqtt();
   mqtt.loop();
   checkNetworkTransitions();

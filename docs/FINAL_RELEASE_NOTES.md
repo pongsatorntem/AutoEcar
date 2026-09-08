@@ -1,22 +1,27 @@
 # Traffic Light — Final Release Notes
 
 ## Final display rule
-- GREEN: full-screen green, no normal text.
-- YELLOW: full-screen yellow with black `CAUTION`.
-- RED: full-screen red with white `STOP`.
+- Field deployment: D1–D3; software still supports IDs 1–7.
+- GREEN: upward green arrow on black.
+- YELLOW: filled upward yellow triangle on black.
+- RED: thick centered red X on black.
 - RETURN: same as YELLOW.
-- Sensor/link faults remain small corner/bottom warnings and never replace the traffic state.
-- All displays in the junction show the same state simultaneously.
+- Precedence: RED/STOP → red X; YELLOW/CAUTION → yellow triangle; effective fault / LINK ERR → yellow triangle; explicit GREEN/GO → green arrow; unknown → yellow triangle.
+- Missing or incorrectly typed MQTT text/color fields no longer default to GO/green. MQTT schema and Pi publisher are unchanged.
+- Fault details remain in diagnostics; symbol mode does not display fault badges. Healthy connected displays render the same Pi state.
+- Canonical ESP project: `C:\TPCAP_TRAFFIC_LIGHT\AutoEcar_git\esp32_display`.
+- Production builds: `display1_symbols`, `display2_symbols`, `display3_symbols`; symbol mode and scan/base 32/32 are enabled, bench mode is disabled.
+- Field mapping remains physical 64×32 → DMA 128×16 with direct pixel writes, one panel, brightness 60, and unchanged HUB75/W5500 pins.
 
 ## Logic locked for Friday test
 - TF-Mini Plus x4.
 - Forward direction only: S4 -> S3 confirms Yellow, S2 -> S1 confirms Red.
 - Timestamp window prevents raw simultaneous-AND dependency.
 - Debounce + gap-hold merges cab/body/operator/dolly gaps into one convoy.
-- Red overwrites Idle/Yellow immediately.
+- A valid red pair overwrites Idle/Yellow/Return immediately; another red trigger while RED resets the clear timer.
 - V1.1 RED holds until S1 is online, fresh, and continuously clear for 1 s, then RETURN yellow fixed 5 s.
 - If the yellow convoy is still active after RETURN, continue Yellow without a green flash.
-- Sensor failure does not force the entire junction Red; it is displayed as a fault badge and logged.
+- Sensor failure does not force the Pi state Red; it is logged and displayed using the symbol fault precedence above.
 - Special-junction priority logic is intentionally deferred.
 
 ## Friday rule
@@ -33,7 +38,8 @@ Do not change multiple timing parameters simultaneously. Verify sensor distance/
 ## v1.1 — RED release controlled by S1 clear
 - RED no longer exits on a fixed 5 s timer.
 - After S2 -> S1 triggers RED, S1 is the direct RED release authority.
-- RED holds while S1 is occupied, offline, stale, or unknown.
+- RED holds and resets its clear timer while S1 is occupied, offline, stale, unknown, or has a future timestamp.
+- Known residual risk, unchanged: restarting the service with a vehicle already on S1 may not reconstruct RED without a new S2 -> S1 pair.
 - RETURN yellow starts only after S1 remains online, fresh, and continuously clear for `red_clear_delay_s=1.0`; freshness is gated by `red_exit_sensor_fresh_timeout_s=0.5`.
 
 ## 1.0.1-final — Raspberry Pi Bookworm install hotfix
